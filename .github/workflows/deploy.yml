@@ -1,0 +1,36 @@
+name: Publish reviewed pilot to Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout public pilot source
+        uses: actions/checkout@v6
+      - name: Verify and unpack exact reviewed static application
+        run: |
+          echo "af14c5d81d9f28ef4c3c2eedcf230c6a5f1d784bf947d3c7cfa35333e6ea956c  pilot-runtime.zip" | sha256sum --check --strict
+          unzip -q pilot-runtime.zip -d _site
+          echo "d673c6b2c8b6b495080d002f63590a007eb9479f82a03647dc8c67e5f2098f5d  _site/index.html" | sha256sum --check --strict
+          test "$(find _site -type f | wc -l)" -eq 78
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload static application only
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Publish Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
