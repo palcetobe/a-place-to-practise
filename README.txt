@@ -5,7 +5,7 @@ The Pages workflow verifies its hash and publishes only the78application files i
 The landscape and reviewed behaviour are preserved. Narration is a provisional static
 Kokoro af_heart audition,optional and never based on a visitor's writing.
 This is a review pilot,not a clinically validated product or an approved final release.
-Some unported screens and browser metadata retain legacy Maps & Mirrors wording.
+Current product labels use A Place to Practise. Genuine source metaphors and technical IDs are retained.
 The original Maps & Mirrors production repository is separate and untouched.
 
 Third-party font/icon licence notices remain with their assets in the runtime archive.
