@@ -2,6 +2,8 @@ name: Publish reviewed pilot to Pages
 on:
   push:
     branches: [main]
+    # Runtime uploads stage a release; updating its pinned hashes publishes it.
+    paths: ['.github/workflows/deploy.yml']
   workflow_dispatch:
 permissions:
   contents: read
