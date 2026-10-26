@@ -21,10 +21,10 @@ jobs:
         uses: actions/checkout@v6
       - name: Verify and unpack exact reviewed static application
         run: |
-          echo "af14c5d81d9f28ef4c3c2eedcf230c6a5f1d784bf947d3c7cfa35333e6ea956c  pilot-runtime.zip" | sha256sum --check --strict
+          echo "07e5785c4f2b9f7806c9fd8520c84705809799a87c1834298d0e7a24344ae26b  pilot-runtime.zip" | sha256sum --check --strict
           unzip -q pilot-runtime.zip -d _site
-          echo "d673c6b2c8b6b495080d002f63590a007eb9479f82a03647dc8c67e5f2098f5d  _site/index.html" | sha256sum --check --strict
-          test "$(find _site -type f | wc -l)" -eq 78
+          echo "d1edb94c452069bb9037382fe9a6e0b448f265ce2a2b7929a0ddeeeb8379902e  _site/index.html" | sha256sum --check --strict
+          test "$(find _site -type f | wc -l)" -eq 79
       - name: Add standalone review prototypes without changing the application
         run: |
           echo "b88225f7738e1ecada14a7f6eecec7b27b1ca6e944b8237b76fff145380777c5  standalone-previews.zip" | sha256sum --check --strict
