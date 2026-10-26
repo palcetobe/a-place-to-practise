@@ -25,6 +25,10 @@ jobs:
           unzip -q pilot-runtime.zip -d _site
           echo "d673c6b2c8b6b495080d002f63590a007eb9479f82a03647dc8c67e5f2098f5d  _site/index.html" | sha256sum --check --strict
           test "$(find _site -type f | wc -l)" -eq 78
+      - name: Add standalone review prototypes without changing the application
+        run: |
+          echo "b88225f7738e1ecada14a7f6eecec7b27b1ca6e944b8237b76fff145380777c5  standalone-previews.zip" | sha256sum --check --strict
+          unzip -q standalone-previews.zip -d _site
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static application only
