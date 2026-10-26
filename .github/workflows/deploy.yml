@@ -29,7 +29,7 @@ jobs:
           test "$(find _site -type f | wc -l)" -eq 80
       - name: Add standalone review prototypes without changing the application
         run: |
-          echo "ae75fd781adbce8687626260e1881edf075147c1f07bd655abed54f2e0893615  standalone-previews.zip" | sha256sum --check --strict
+          echo "4fc1567f368794c5653cbe9a28e97c748950affa7b5bd0355bc7769f8d79282e  standalone-previews.zip" | sha256sum --check --strict
           unzip -q standalone-previews.zip -d _site
       - name: Configure Pages
         uses: actions/configure-pages@v5
