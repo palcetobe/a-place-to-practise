@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v6
       - name: Verify and unpack exact reviewed static application
         run: |
-          echo "2c4de89c84f993f3c8ada65dfd86cb4f653b1096acfc0b260c9a29bbbdf2c36d  pilot-runtime.zip" | sha256sum --check --strict
+          echo "943de2e66c749eb7d3e80213cb86053737ada29a53b21e61e63e33752ae95735  pilot-runtime.zip" | sha256sum --check --strict
           unzip -q pilot-runtime.zip -d _site
           echo "c31eb1bf618296b92a7cea17ab1e2a4ff342b4b1cf54b1c05e6d32ae88973130  _site/index.html" | sha256sum --check --strict
           test "$(find _site -type f | wc -l)" -eq 80
