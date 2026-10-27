@@ -33,11 +33,11 @@ jobs:
           unzip -q standalone-previews.zip -d _site
       - name: Add isolated tool-finding review without changing existing pages
         run: |
-          echo "1ecf951c8e4b96c5509f573d0e8e62f141658f81ee3c711a5ff09e514c125d86  tool-finding-review.zip" | sha256sum --check --strict
+          echo "39aaddc0709951a98499b1e875a2ba984eaa65e79d143a247578e0af0e5ed8d3  tool-finding-review.zip" | sha256sum --check --strict
           unzip -q tool-finding-review.zip -d _site
       - name: Add exact recovered PMR recordings to separate review only
         run: |
-          echo "fc9d446326238f6f4e6ac376cf7623104225d2297812ab65ac99f047a77bef6f  pmr-review-media.zip" | sha256sum --check --strict
+          echo "053882ed9fb8dafb67e17e68a42445e686be97ada5690f5dab9abaee97df91a6  pmr-review-media.zip" | sha256sum --check --strict
           unzip -q pmr-review-media.zip -d _site
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -48,3 +48,4 @@ jobs:
       - name: Publish Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
