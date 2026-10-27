@@ -23,17 +23,19 @@ jobs:
         uses: actions/checkout@v6
       - name: Verify and unpack exact reviewed static application
         run: |
-          echo "cf6a0f0de20837673eedb7db8ede65ed2bbd275fcbd80f257f8ea070446328ae  pilot-runtime.zip" | sha256sum --check --strict
+          echo "53349be4d7c1380958241d423992902e601a638659780127a75d5885ce90391e  pilot-runtime.zip" | sha256sum --check --strict
           unzip -q pilot-runtime.zip -d _site
-          echo "845378c7046f5430aee8168b1310a1b6a1dd925bb10de8579830f68e0fdd8c12  _site/index.html" | sha256sum --check --strict
-          test "$(find _site -type f | wc -l)" -eq 90
+          echo "bf21429d30b1f3b1845d580c1589a70cdeb8845a76b35d87b94eead494b2cee4  pilot-media.zip" | sha256sum --check --strict
+          unzip -q pilot-media.zip -d _site
+          echo "3f7016eda974bf39cf4c2384b724e411fd23fe7d2d40681809906feb9cdea7f4  _site/index.html" | sha256sum --check --strict
+          test "$(find _site -type f | wc -l)" -eq 231
       - name: Add standalone review prototypes without changing the application
         run: |
           echo "4fc1567f368794c5653cbe9a28e97c748950affa7b5bd0355bc7769f8d79282e  standalone-previews.zip" | sha256sum --check --strict
           unzip -q standalone-previews.zip -d _site
       - name: Add isolated tool-finding review without changing existing pages
         run: |
-          echo "39aaddc0709951a98499b1e875a2ba984eaa65e79d143a247578e0af0e5ed8d3  tool-finding-review.zip" | sha256sum --check --strict
+          echo "eb357b11f5963e3f8ac41d3314eddedc00cb3f14a8359a268f63eea859a2ad88  tool-finding-review.zip" | sha256sum --check --strict
           unzip -q tool-finding-review.zip -d _site
       - name: Add exact recovered PMR recordings to separate review only
         run: |
@@ -48,4 +50,5 @@ jobs:
       - name: Publish Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
 
