@@ -35,7 +35,7 @@ jobs:
           unzip -q standalone-previews.zip -d _site
       - name: Add isolated tool-finding review without changing existing pages
         run: |
-          echo "f1fdf4254a1ac9348a8be79c19fe037dd7821348d025dd42dd9ee06a36d00f88  tool-finding-review.zip" | sha256sum --check --strict
+          echo "57871ee5afa1bc44d0b29d239cef9a5e76e0f567e4ad115083c144fa7c876d3f  tool-finding-review.zip" | sha256sum --check --strict
           unzip -q tool-finding-review.zip -d _site
       - name: Add exact recovered PMR recordings to separate review only
         run: |
@@ -43,7 +43,7 @@ jobs:
           unzip -q pmr-review-media.zip -d _site
       - name: Add thought record review to consolidated review
         run: |
-          echo "a4191a4147a2d632d5b5f88d9fd2e4ac4e45409cd2a4999802d653210c6f2e71  thought-record-review.zip" | sha256sum --check --strict
+          echo "3bfb554f6227df60512a35b28366753d71593b05301bc56fae0b90caf312d8f3  thought-record-review.zip" | sha256sum --check --strict
           unzip -q thought-record-review.zip -d _site
       - name: Add thought record review video to consolidated review
         run: |
@@ -53,6 +53,10 @@ jobs:
         run: |
           echo "258b272a20203869ef501553d15a496590a6e10c482d01e752f1df815e824e0d  thought-record-review-audio.zip" | sha256sum --check --strict
           unzip -q thought-record-review-audio.zip -d _site
+      - name: Add reviewed fixed narration and generic selected-word bank
+        run: |
+          echo "1d6179fe633cbf578525a1a2f6b893aea1892b3d12b98a9f2d226942e7ea4216  completion-review-audio.zip" | sha256sum --check --strict
+          unzip -q completion-review-audio.zip -d _site
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static application only
