@@ -35,7 +35,7 @@ jobs:
           unzip -q standalone-previews.zip -d _site
       - name: Add isolated tool-finding review without changing existing pages
         run: |
-          echo "57871ee5afa1bc44d0b29d239cef9a5e76e0f567e4ad115083c144fa7c876d3f  tool-finding-review.zip" | sha256sum --check --strict
+          echo "3156a3a70a27b90ca13c56cb188888f6caf74d13c5910e6279f4af0ce128d74b  tool-finding-review.zip" | sha256sum --check --strict
           unzip -q tool-finding-review.zip -d _site
       - name: Add exact recovered PMR recordings to separate review only
         run: |
@@ -43,7 +43,7 @@ jobs:
           unzip -q pmr-review-media.zip -d _site
       - name: Add thought record review to consolidated review
         run: |
-          echo "3bfb554f6227df60512a35b28366753d71593b05301bc56fae0b90caf312d8f3  thought-record-review.zip" | sha256sum --check --strict
+          echo "5ed720e7480804210e2d23f0af8d57925a2df856e0599338022551347a101a14  thought-record-review.zip" | sha256sum --check --strict
           unzip -q thought-record-review.zip -d _site
       - name: Add thought record review video to consolidated review
         run: |
