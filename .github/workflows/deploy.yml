@@ -83,7 +83,7 @@ jobs:
               archive.extractall('_site')
           PYZIP
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
-          echo "ddb3e73f1a0b8d6b0a9f281c17979d8edcb95c7ca389d15cfe307cbf86933cee  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          echo "ca9479d9822aeaf096a38a772989d57dac7901e9798ae113c5a4bca4e06e7613  integrated-guide-link-fix.zip" | sha256sum --check --strict
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
