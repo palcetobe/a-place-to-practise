@@ -57,6 +57,13 @@ jobs:
         run: |
           echo "1d6179fe633cbf578525a1a2f6b893aea1892b3d12b98a9f2d226942e7ea4216  completion-review-audio.zip" | sha256sum --check --strict
           unzip -q completion-review-audio.zip -d _site
+      - name: Add separate draft client review package 2
+        run: |
+          echo "ebb74a5c786b98a5e3dd98fdd5c928c798b86577c7b38a2f74c9de49e20109bd  client-review-package-2.zip" | sha256sum --check --strict
+          test ! -e _site/previews/client-review-package-2
+          mkdir -p _site/previews/client-review-package-2
+          unzip -q client-review-package-2.zip -d _site/previews/client-review-package-2
+          test "$(find _site/previews/client-review-package-2 -type f | wc -l)" -eq 16
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static application only
