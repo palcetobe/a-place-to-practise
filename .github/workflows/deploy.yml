@@ -99,7 +99,7 @@ jobs:
                   assert not (Path('_site') / entry.filename).exists()
               recordings.extractall('_site')
           PYNARR
-          echo "ff582249a13606e0d0c7a273bc311da30725309e1f4de807c1b4edb5405bc457  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          echo "7c83414528c30716739b3e38bd7ed731e451122587e673cee089d22039528d83  integrated-guide-link-fix.zip" | sha256sum --check --strict
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
