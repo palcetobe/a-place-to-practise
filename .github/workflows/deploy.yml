@@ -99,7 +99,23 @@ jobs:
                   assert not (Path('_site') / entry.filename).exists()
               recordings.extractall('_site')
           PYNARR
-          echo "7c83414528c30716739b3e38bd7ed731e451122587e673cee089d22039528d83  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          cat approved-native-teaching.zip.part01 approved-native-teaching.zip.part02 approved-native-teaching.zip.part03 > /tmp/approved-native-teaching.zip
+          echo "e49cd325dbd7b32c5d74703a8fc4729cacd0912fc3078e3273c657f89aff703e  /tmp/approved-native-teaching.zip" | sha256sum --check --strict
+          python3 - <<'PYTEACH'
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZipFile
+          with ZipFile('/tmp/approved-native-teaching.zip') as recordings:
+              assert len(recordings.infolist()) == 33
+              assert recordings.testzip() is None
+              for entry in recordings.infolist():
+                  path = PurePosixPath(entry.filename)
+                  assert len(path.parts) == 3 and path.parts[:2] == ('narration-approved', 'teaching')
+                  assert not path.is_absolute() and '..' not in path.parts and path.suffix == '.wav'
+                  assert (entry.external_attr >> 16) & 0o170000 != 0o120000
+                  assert not (Path('_site') / entry.filename).exists()
+              recordings.extractall('_site')
+          PYTEACH
+          echo "6ef7bf5acc88e4a20f29fdd36208258970f8a3406204b0edcfda54f90a806a1d  integrated-guide-link-fix.zip" | sha256sum --check --strict
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
