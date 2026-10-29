@@ -115,7 +115,7 @@ jobs:
                   assert not (Path('_site') / entry.filename).exists()
               recordings.extractall('_site')
           PYTEACH
-          echo "6ef7bf5acc88e4a20f29fdd36208258970f8a3406204b0edcfda54f90a806a1d  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          echo "0babec6d63e96ea728f47c985ba364fc7021931fdd6bd3ae0398167467542e73  integrated-guide-link-fix.zip" | sha256sum --check --strict
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
