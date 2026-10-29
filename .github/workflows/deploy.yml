@@ -64,6 +64,29 @@ jobs:
           mkdir -p _site/previews/client-review-package-2
           unzip -q client-review-package-2.zip -d _site/previews/client-review-package-2
           test "$(find _site/previews/client-review-package-2 -type f | wc -l)" -eq 16
+      - name: Install the verified integrated project working draft
+        run: |
+          find _site/previews -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/preserved-previews.sha256
+          cat integrated-working-draft.zip.part01a integrated-working-draft.zip.part01b integrated-working-draft.zip.part02a integrated-working-draft.zip.part02b integrated-working-draft.zip.part03a integrated-working-draft.zip.part03b integrated-working-draft.zip.part04a integrated-working-draft.zip.part04b integrated-working-draft.zip.part05a integrated-working-draft.zip.part05b integrated-working-draft.zip.part06a integrated-working-draft.zip.part06b integrated-working-draft.zip.part07a integrated-working-draft.zip.part07b integrated-working-draft.zip.part08 > /tmp/integrated-working-draft.zip
+          echo "02c511a6ffecd742e67e9fcaaa83445186d12fa47331c26ca2cbdf86fe395070  /tmp/integrated-working-draft.zip" | sha256sum --check --strict
+          python3 - <<'PYZIP'
+          from pathlib import PurePosixPath
+          from zipfile import ZipFile
+          with ZipFile('/tmp/integrated-working-draft.zip') as archive:
+              assert len(archive.infolist()) == 499
+              assert archive.testzip() is None
+              for entry in archive.infolist():
+                  path = PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts
+                  assert path.parts[0] != 'previews' and '\\' not in entry.filename
+                  assert (entry.external_attr >> 16) & 0o170000 != 0o120000
+              archive.extractall('_site')
+          PYZIP
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          echo "e4e2621771bd980934bedda5ae9ae8418daa29d570dfa29d90eed6f13ba778f0  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          unzip -oq integrated-guide-link-fix.zip -d _site
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static application only
