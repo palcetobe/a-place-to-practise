@@ -1,9 +1,9 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030]
+    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json']
   workflow_dispatch:
 permissions:
   contents: read
@@ -218,6 +218,62 @@ jobs:
           assert all(after[k]==v for k,v in release['requiredRetirements'].items())
           print(json.dumps({'retirementInvariantsVerified':45,'finalApplicationFiles':741}))
           PYRETIRE
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Apply approved existing repairs and Temperature routing on exact baseline
+        run: |
+          python3 - <<'PYREPAIRS'
+          import base64,hashlib,io,json,pathlib,zipfile
+          root=pathlib.Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
+          raw=pathlib.Path('existing-repairs-temperature.json').read_bytes()
+          assert sha(raw)=='b4cee45b4ee90886a00d1318f3e646acd460380dbcf28dc3dbbc425ad9b5a80a', 'Repair text payload checksum mismatch'
+          p=json.loads(raw);assert p['schema']=='aptp-existing-repairs-temperature-v1'
+          assert p['archiveSHA256']=='8e656b6c2bcdd592a29c056c2942969f403308f40975d18794e3757489206bac'
+          assert p['candidateManifestSHA256']=='5a99936c3dcf55c5d38d9e956714043f767f95585740d52fbedeb1d6b6f48a09'
+          source=pathlib.Path('consolidated-packet-release.json').read_bytes()
+          assert sha(source)=='6339a94a6d502f8c165baed7410a8b410cc998f1bbb9c7765dc24f21cb91a41d'
+          release=json.loads(source);before=release['finalFiles'];assert len(before)==741
+          digest=lambda d:sha(json.dumps(d,sort_keys=True,separators=(',',':')).encode())
+          assert digest(before)==p['baselineFilesDigest']
+          def census():
+              result={}
+              for f in root.rglob('*'):
+                  assert not f.is_symlink()
+                  if f.is_file():result[f.relative_to(root).as_posix()]=sha(f.read_bytes())
+              return result
+          all_before=census();previews={k:v for k,v in all_before.items() if k.startswith('previews/')}
+          assert len(previews)==422, 'Preserved preview census mismatch'
+          app={k:v for k,v in all_before.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}
+          assert app==before, 'Whole 741-file baseline mismatch before repairs'
+          allow=['full-skill-narration-data.js', 'index.html', 'matched-client-guides.js', 'native-role-refinements.js', 'navigation.js', 'project-integration.js', 'routes.js', 'settle-candidate.js', 'temperature-practice.js']
+          changes={x['path']:x for x in p['changes']};assert len(p['changes'])==9 and set(changes)==set(allow)
+          after=dict(before)
+          for name,d in changes.items():
+              assert d['before']==before[name];after[name]=d['after']
+          assert digest(after)==p['resultFilesDigest']
+          assert all(after[k]==v for k,v in release['requiredRetirements'].items()) and len(release['requiredRetirements'])==45
+          media={k:v for k,v in before.items() if pathlib.PurePosixPath(k).suffix.lower() in ('.wav','.mp3','.mp4','.webm','.png','.jpg','.jpeg','.svg','.gif','.webp','.pdf','.ogg','.m4a')}
+          assert len(media)==449 and all(after[k]==v for k,v in media.items())
+          blob=base64.b64decode(p['archiveBase64'],validate=True)
+          assert len(blob)==p['archiveBytes']==372956 and sha(blob)==p['archiveSHA256']
+          with zipfile.ZipFile(io.BytesIO(blob)) as z:
+              assert len(z.infolist())==9 and set(z.namelist())==set(allow) and z.testzip() is None
+              for entry in z.infolist():
+                  path=pathlib.PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts and '\\' not in entry.filename
+                  assert path.parts[0]!='previews' and entry.filename!='_integrated_manifest.sha256'
+                  assert (entry.external_attr>>16)&0o170000 != 0o120000
+                  assert sha(z.read(entry))==changes[entry.filename]['after']
+              for entry in z.infolist():(root/entry.filename).write_bytes(z.read(entry))
+          all_after=census()
+          assert {k:v for k,v in all_after.items() if k.startswith('previews/')}==previews
+          assert {k:v for k,v in all_after.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}==after
+          assert sum(before[k]==after[k] for k in before)==732
+          manifest=''.join(v+'  '+k+'\n' for k,v in sorted(after.items()))
+          (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
+          assert (root/'_integrated_manifest.sha256').read_text()==manifest
+          print(json.dumps({'verifiedApplicationFiles':741,'changedFiles':9,'unchangedFiles':732,'preservedAssets':449,'retirementPaths':45,'preservedPreviews':422,'archiveSHA256':p['archiveSHA256']}))
+          PYREPAIRS
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
