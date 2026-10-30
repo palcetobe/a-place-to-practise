@@ -122,7 +122,7 @@ jobs:
           import base64,hashlib,io,json,pathlib,zipfile
           root=pathlib.Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
           raw=pathlib.Path('consolidated-packet-release.json').read_bytes()
-          assert sha(raw)=='9e4e87a6ddff3726f6d0b1a597e18f4887af679898cac4b958ca92ab6aa4f12e', 'Consolidated manifest checksum mismatch'
+          assert sha(raw)=='6339a94a6d502f8c165baed7410a8b410cc998f1bbb9c7765dc24f21cb91a41d', 'Consolidated manifest checksum mismatch'
           m=json.loads(raw);assert m['schema']=='aptp-consolidated-after-retirement-v1'
           c=json.loads(pathlib.Path('retirement-cleanup.json').read_text())
           assert m['baselineFiles']==c['beforeFiles'] and len(m['baselineFiles'])==697
@@ -141,7 +141,8 @@ jobs:
               assert part['path']==f'consolidated-packet.part{i:02d}.b64'
               content=pathlib.Path(part['path']).read_bytes()
               assert len(content)==part['bytes'] and sha(content)==part['sha256'], 'Part checksum mismatch'
-              parts.append(content)
+              assert content.endswith(b'\n') and not content.endswith(b'\n\n'), 'Expected exactly one text-editor terminal LF'
+              parts.append(content[:-1])
           blob=base64.b64decode(b''.join(parts),validate=True)
           assert len(blob)==m['archiveBytes'] and sha(blob)==m['archiveSHA256']=='baae7fcac80f09bc6af7c07c9f0b2a09e6e5041f702a0f42c48103ffb6c7acc9'
           delta={d['path']:d for d in m['delta']};assert len(delta)==56
