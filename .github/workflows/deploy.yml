@@ -115,7 +115,7 @@ jobs:
                   assert not (Path('_site') / entry.filename).exists()
               recordings.extractall('_site')
           PYTEACH
-          echo "610c5b938747f04a88c600e6aa2e6b0707db57c24d0abacb4fe05f7c9f0f7b02  integrated-guide-link-fix.zip" | sha256sum --check --strict
+          echo "ea71aa2430f78b05032bf3e825b50dc9996fea688d921c350fe548326a5b196f  integrated-guide-link-fix.zip" | sha256sum --check --strict
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
@@ -128,5 +128,6 @@ jobs:
       - name: Publish Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
 
 
