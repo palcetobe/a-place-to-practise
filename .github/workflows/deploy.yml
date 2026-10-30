@@ -1,9 +1,9 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030]
+    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030, approved-navigation-20261030]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json']
   workflow_dispatch:
 permissions:
   contents: read
@@ -274,6 +274,49 @@ jobs:
           assert (root/'_integrated_manifest.sha256').read_text()==manifest
           print(json.dumps({'verifiedApplicationFiles':741,'changedFiles':9,'unchangedFiles':732,'preservedAssets':449,'retirementPaths':45,'preservedPreviews':422,'archiveSHA256':p['archiveSHA256']}))
           PYREPAIRS
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Apply approved navigation on exact PR15 baseline
+        run: |
+          python3 - <<'PYNAV'
+          import base64,hashlib,io,json,pathlib,zipfile
+          root=pathlib.Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
+          raw=pathlib.Path('approved-navigation.json').read_bytes()
+          assert sha(raw)=='85252effd563fcdc550adeff691fe5c0525bc7ca782a0b18bcc1fb02f1c26e6c', 'Approved navigation payload checksum mismatch'
+          p=json.loads(raw);assert p['schema']=='aptp-approved-navigation-v1'
+          before=p['before'];after=p['after'];assert len(before)==741 and len(after)==743
+          def census():
+           result={}
+           for f in root.rglob('*'):
+            assert not f.is_symlink()
+            if f.is_file():result[f.relative_to(root).as_posix()]=sha(f.read_bytes())
+           return result
+          all_before=census();previews={k:v for k,v in all_before.items() if k.startswith('previews/')};assert len(previews)==422
+          app={k:v for k,v in all_before.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}
+          assert app==before, 'Whole PR15 application baseline mismatch'
+          allow=['goal-navigation.css','goal-navigation.js','index.html','routes.js']
+          assert set(after)-set(before)=={'goal-navigation.css','goal-navigation.js'} and not set(before)-set(after)
+          assert sorted(k for k in after if after[k]!=before.get(k))==allow
+          assert sum(before[k]==after[k] for k in before)==739
+          media={k:v for k,v in before.items() if pathlib.PurePosixPath(k).suffix.lower() in ('.wav','.mp3','.mp4','.webm','.png','.jpg','.jpeg','.svg','.gif','.webp','.pdf','.ogg','.m4a')}
+          assert len(media)==449 and all(after[k]==v for k,v in media.items())
+          retired=json.loads(pathlib.Path('consolidated-packet-release.json').read_text())['requiredRetirements']
+          assert len(retired)==45 and all(before[k]==after[k]==v for k,v in retired.items())
+          blob=base64.b64decode(p['archiveBase64'],validate=True);assert len(blob)==p['archiveBytes'] and sha(blob)==p['archiveSHA256']
+          with zipfile.ZipFile(io.BytesIO(blob)) as z:
+           assert len(z.infolist())==4 and sorted(z.namelist())==allow and z.testzip() is None
+           for e in z.infolist():
+            path=pathlib.PurePosixPath(e.filename)
+            assert not path.is_absolute() and '..' not in path.parts and '\\' not in e.filename
+            assert (e.external_attr>>16)&0o170000 != 0o120000
+            assert sha(z.read(e))==after[e.filename]
+           for e in z.infolist():(root/e.filename).write_bytes(z.read(e))
+          actual=census();assert {k:v for k,v in actual.items() if k.startswith('previews/')}==previews
+          assert {k:v for k,v in actual.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}==after
+          manifest=''.join(v+'  '+k+'\n' for k,v in sorted(after.items()))
+          (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
+          print(json.dumps({'verifiedApplicationFiles':743,'changedExistingFiles':2,'newNavigationFiles':2,'unchangedExistingFiles':739,'preservedAssets':449,'retirementPaths':45,'preservedPreviews':422}))
+          PYNAV
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
