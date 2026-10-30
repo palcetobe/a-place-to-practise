@@ -1,23 +1,20 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main]
+    branches: [main, retirement-cleanup-20261030]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json']
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout public pilot source
         uses: actions/checkout@v6
@@ -119,15 +116,75 @@ jobs:
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Apply exact approved retirement overlay after all application archives
+        run: |
+          python3 - <<'PYRETIRE'
+          import base64, hashlib, io, json, pathlib, zipfile
+          root=pathlib.Path('_site')
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          raw=pathlib.Path('retirement-cleanup.json').read_bytes()
+          assert sha(raw)=="4703c8be9a3602a39d60530629cd1309a6cf965dd727888d1d9039d959893111", 'Text transport checksum mismatch'
+          p=json.loads(raw)
+          assert p['schema']=='aptp-retirement-overlay-v1'
+          before=p['beforeFiles']; changes=p['changes']
+          assert len(before)==697 and len(changes)==45
+          assert len({c['path'] for c in changes})==45
+          assert sum(c['path'].endswith('.html') for c in changes)==44
+          assert {c['path'] for c in changes if not c['path'].endswith('.html')}=={'review-hub.js'}
+          def census():
+              result={}
+              for path in root.rglob('*'):
+                  assert not path.is_symlink(), 'Unexpected symlink'
+                  if path.is_file(): result[path.relative_to(root).as_posix()]=sha(path.read_bytes())
+              return result
+          all_before=census()
+          previews={k:v for k,v in all_before.items() if k.startswith('previews/')}
+          assert previews, 'Preserved previews missing'
+          app={k:v for k,v in all_before.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}
+          missing=sorted(set(before)-set(app));extra=sorted(set(app)-set(before));changed=sorted(k for k in set(app)&set(before) if app[k]!=before[k])
+          assert not (missing or extra or changed), json.dumps({'wholeTreeMismatch':True,'missing':missing,'extra':extra,'changed':changed})
+          blob=base64.b64decode(p['archiveBase64'],validate=True)
+          assert sha(blob)==p['archiveSHA256']=='b778b3f034c9f74df7f39ca8eb84dc620ed2bb5d85514872eaf189db78c529ab'
+          after=dict(before)
+          for c in changes:
+              assert c['before']==before[c['path']]
+              after[c['path']]=c['after']
+          with zipfile.ZipFile(io.BytesIO(blob)) as z:
+              assert z.testzip() is None
+              assert len(z.infolist())==45 and set(z.namelist())=={c['path'] for c in changes}
+              for entry in z.infolist():
+                  path=pathlib.PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts and '\\' not in entry.filename
+                  assert path.parts[0] in ('drafts','recovered') or entry.filename=='review-hub.js'
+                  assert (entry.external_attr>>16)&0o170000 != 0o120000
+                  assert sha(z.read(entry))==after[entry.filename]
+              for entry in z.infolist(): (root/entry.filename).write_bytes(z.read(entry))
+          all_after=census()
+          assert {k:v for k,v in all_after.items() if k.startswith('previews/')}==previews
+          assert {k:v for k,v in all_after.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}==after
+          manifest=''.join(v+'  '+k+'\n' for k,v in sorted(after.items()))
+          (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
+          assert (root/'_integrated_manifest.sha256').read_text()==manifest
+          print(json.dumps({'approvedHTMLNotices':44,'hostRetirement':1,'applicationFilesVerified':len(after),'preservedPreviewFiles':len(previews),'unchangedApplicationFiles':652,'archiveSHA256':p['archiveSHA256']}))
+          PYRETIRE
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
+        if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
       - name: Upload static application only
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Publish Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-
-
