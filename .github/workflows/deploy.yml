@@ -1,9 +1,9 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main, retirement-cleanup-20261030]
+    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64']
   workflow_dispatch:
 permissions:
   contents: read
@@ -116,7 +116,52 @@ jobs:
           unzip -oq integrated-guide-link-fix.zip -d _site
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
-      - name: Apply exact approved retirement overlay after all application archives
+      - name: Install exact approved consolidated packet on verified baseline
+        run: |
+          python3 - <<'PYCONSOLIDATED'
+          import base64,hashlib,io,json,pathlib,zipfile
+          root=pathlib.Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
+          raw=pathlib.Path('consolidated-packet-release.json').read_bytes()
+          assert sha(raw)=='9e4e87a6ddff3726f6d0b1a597e18f4887af679898cac4b958ca92ab6aa4f12e', 'Consolidated manifest checksum mismatch'
+          m=json.loads(raw);assert m['schema']=='aptp-consolidated-after-retirement-v1'
+          c=json.loads(pathlib.Path('retirement-cleanup.json').read_text())
+          assert m['baselineFiles']==c['beforeFiles'] and len(m['baselineFiles'])==697
+          def app_census():
+              out={}
+              for p in root.rglob('*'):
+                  assert not p.is_symlink()
+                  if p.is_file():
+                      name=p.relative_to(root).as_posix()
+                      if not name.startswith('previews/') and name!='_integrated_manifest.sha256':out[name]=sha(p.read_bytes())
+              return out
+          assert app_census()==m['baselineFiles'], 'Whole 697-file baseline mismatch before consolidated delta'
+          parts=[]
+          assert len(m['parts'])==15
+          for i,part in enumerate(m['parts'],1):
+              assert part['path']==f'consolidated-packet.part{i:02d}.b64'
+              content=pathlib.Path(part['path']).read_bytes()
+              assert len(content)==part['bytes'] and sha(content)==part['sha256'], 'Part checksum mismatch'
+              parts.append(content)
+          blob=base64.b64decode(b''.join(parts),validate=True)
+          assert len(blob)==m['archiveBytes'] and sha(blob)==m['archiveSHA256']=='baae7fcac80f09bc6af7c07c9f0b2a09e6e5041f702a0f42c48103ffb6c7acc9'
+          delta={d['path']:d for d in m['delta']};assert len(delta)==56
+          assert len(m['preRetirementFiles'])==741
+          assert not set(delta)&set(m['requiredRetirements'])
+          for name,d in delta.items():assert d['before']==m['baselineFiles'].get(name) and d['after']==m['preRetirementFiles'][name]
+          with zipfile.ZipFile(io.BytesIO(blob)) as z:
+              assert len(z.infolist())==56 and set(z.namelist())==set(delta) and z.testzip() is None
+              for entry in z.infolist():
+                  p=pathlib.PurePosixPath(entry.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and '\\' not in entry.filename
+                  assert p.parts[0]!='previews' and entry.filename!='_integrated_manifest.sha256'
+                  assert (entry.external_attr>>16)&0o170000 != 0o120000
+                  assert sha(z.read(entry))==delta[entry.filename]['after']
+              for entry in z.infolist():
+                  target=root/entry.filename;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(entry))
+          assert app_census()==m['preRetirementFiles'], 'Whole 741-file consolidated result mismatch'
+          print(json.dumps({'consolidatedDeltaFiles':56,'addedFiles':44,'modifiedFiles':12,'verifiedPreRetirementFiles':741,'narrationFiles':38}))
+          PYCONSOLIDATED
+      - name: Apply unchanged retirement payload last and verify whole final tree
         run: |
           python3 - <<'PYRETIRE'
           import base64, hashlib, io, json, pathlib, zipfile
@@ -126,8 +171,8 @@ jobs:
           assert sha(raw)=="4703c8be9a3602a39d60530629cd1309a6cf965dd727888d1d9039d959893111", 'Text transport checksum mismatch'
           p=json.loads(raw)
           assert p['schema']=='aptp-retirement-overlay-v1'
-          before=p['beforeFiles']; changes=p['changes']
-          assert len(before)==697 and len(changes)==45
+          before=json.loads(pathlib.Path('consolidated-packet-release.json').read_text())['preRetirementFiles']; changes=p['changes']
+          assert len(before)==741 and len(changes)==45
           assert len({c['path'] for c in changes})==45
           assert sum(c['path'].endswith('.html') for c in changes)==44
           assert {c['path'] for c in changes if not c['path'].endswith('.html')}=={'review-hub.js'}
@@ -165,7 +210,12 @@ jobs:
           manifest=''.join(v+'  '+k+'\n' for k,v in sorted(after.items()))
           (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
           assert (root/'_integrated_manifest.sha256').read_text()==manifest
-          print(json.dumps({'approvedHTMLNotices':44,'hostRetirement':1,'applicationFilesVerified':len(after),'preservedPreviewFiles':len(previews),'unchangedApplicationFiles':652,'archiveSHA256':p['archiveSHA256']}))
+          print(json.dumps({'approvedHTMLNotices':44,'hostRetirement':1,'applicationFilesVerified':len(after),'preservedPreviewFiles':len(previews),'unchangedApplicationFiles':len(after)-45,'archiveSHA256':p['archiveSHA256']}))
+
+          release=json.loads(pathlib.Path('consolidated-packet-release.json').read_text())
+          assert after==release['finalFiles']
+          assert all(after[k]==v for k,v in release['requiredRetirements'].items())
+          print(json.dumps({'retirementInvariantsVerified':45,'finalApplicationFiles':741}))
           PYRETIRE
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
