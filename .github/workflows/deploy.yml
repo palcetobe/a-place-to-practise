@@ -1,9 +1,9 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, consolidated-discovery-labels-20261030]
+    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'consolidated-discovery-correction.json']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64']
   workflow_dispatch:
 permissions:
   contents: read
@@ -218,36 +218,6 @@ jobs:
           assert all(after[k]==v for k,v in release['requiredRetirements'].items())
           print(json.dumps({'retirementInvariantsVerified':45,'finalApplicationFiles':741}))
           PYRETIRE
-          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
-          sha256sum --check --strict /tmp/preserved-previews.sha256
-      - name: Correct resolved draft labels and verify final retirement invariants
-        run: |
-          python3 - <<'PYDISCOVERY'
-          from pathlib import Path
-          import hashlib,json
-          root=Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
-          raw=Path('consolidated-discovery-correction.json').read_bytes();assert sha(raw)=='4cbc51bef5ceb2c676210faa2f838bb1558e34eddb437846be7fb78db5d8b65a'
-          p=json.loads(raw);assert p['schema']=='aptp-approved-discovery-status-correction-v1' and p['path']=='find-a-tool/index.html'
-          def census():
-              out={}
-              for f in root.rglob('*'):
-                  assert not f.is_symlink()
-                  if f.is_file():out[f.relative_to(root).as_posix()]=sha(f.read_bytes())
-              return out
-          initial=census();previews={k:v for k,v in initial.items() if k.startswith('previews/')}
-          app={k:v for k,v in initial.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}
-          assert len(app)==741 and app==p['beforeFiles'], 'Whole tree changed before discovery correction'
-          content=p['text'].encode();assert sha(content)==p['afterSHA256']
-          (root/p['path']).write_bytes(content)
-          expected=dict(app);expected[p['path']]=p['afterSHA256']
-          actual=census();assert {k:v for k,v in actual.items()if k.startswith('previews/')}==previews
-          assert {k:v for k,v in actual.items()if not k.startswith('previews/')and k!='_integrated_manifest.sha256'}==expected
-          required=json.loads(Path('consolidated-packet-release.json').read_text())['requiredRetirements']
-          assert all(expected[k]==v for k,v in required.items())
-          metadata=''.join(v+'  '+k+'\n' for k,v in sorted(expected.items()));(root/'_integrated_manifest.sha256').write_text(metadata,encoding='utf-8',newline='\n')
-          assert (root/'_integrated_manifest.sha256').read_text()==metadata
-          print(json.dumps({'discoveryFileChanged':1,'staleSentencesRemoved':4,'finalFilesVerified':741,'retirementInvariants':len(required),'previewsPreserved':len(previews)}))
-          PYDISCOVERY
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
