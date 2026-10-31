@@ -1,9 +1,9 @@
 name: Publish reviewed pilot to Pages
 on:
   push:
-    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030, approved-navigation-20261030, focused-goals-20261031]
+    branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030, approved-navigation-20261030, focused-goals-20261031, guide-maintenance-20261031]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json', 'guide-maintenance.json', 'guide-maintenance.part*.b64']
   workflow_dispatch:
 permissions:
   contents: read
@@ -360,6 +360,56 @@ jobs:
           (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
           print(json.dumps({'verifiedApplicationFiles':744,'changedExistingFiles':4,'newNavigationFiles':1,'unchangedExistingFiles':739,'preservedAssets':449,'retirementPaths':45,'preservedPreviews':422}))
           PYFOCUSED
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Apply approved factual guide corrections on exact PR17 baseline
+        run: |
+          python3 - <<'PYGUIDES'
+          import base64,hashlib,io,json,pathlib,zipfile
+          root=pathlib.Path('_site');sha=lambda b:hashlib.sha256(b).hexdigest()
+          raw=pathlib.Path('guide-maintenance.json').read_bytes()
+          assert sha(raw)=='4b256ad581b4c9e395be28653e07be48cedca0135cba3887fe3b97fb06e0664e', 'Guide payload checksum mismatch'
+          p=json.loads(raw);assert p['schema']=='aptp-guide-maintenance-v1'
+          before=p['before'];after=p['after'];allow=p['allow']
+          assert len(before)==len(after)==744 and set(before)==set(after)
+          assert len(allow)==17 and sorted(k for k in after if after[k]!=before[k])==allow
+          assert all(k.startswith('client-guides/') and k.endswith('.pdf') for k in allow)
+          def census():
+           result={}
+           for f in root.rglob('*'):
+            assert not f.is_symlink()
+            if f.is_file():result[f.relative_to(root).as_posix()]=sha(f.read_bytes())
+           return result
+          all_before=census();previews={k:v for k,v in all_before.items() if k.startswith('previews/')};assert len(previews)==422
+          app={k:v for k,v in all_before.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}
+          assert app==before, 'Whole PR17 application baseline mismatch'
+          retired=json.loads(pathlib.Path('consolidated-packet-release.json').read_text())['requiredRetirements']
+          assert len(retired)==45 and all(before[k]==after[k]==v for k,v in retired.items())
+          assert sum(k.endswith('.pdf') for k in before)==77
+          assert sum(before[k]==after[k] for k in before)==727
+          text=[]
+          for part in p['parts']:
+           rawpart=pathlib.Path(part['path']).read_bytes()
+           assert len(rawpart)==part['bytes'] and sha(rawpart)==part['sha256']
+           assert rawpart.endswith(b'\n') and not rawpart.endswith(b'\n\n')
+           assert b'\n' not in rawpart[:-1] and b'\r' not in rawpart
+           text.append(rawpart[:-1])
+          blob=base64.b64decode(b''.join(text),validate=True)
+          assert len(blob)==p['archiveBytes'] and sha(blob)==p['archiveSHA256']
+          with zipfile.ZipFile(io.BytesIO(blob)) as z:
+           assert len(z.infolist())==17 and sorted(z.namelist())==allow and z.testzip() is None
+           for e in z.infolist():
+            path=pathlib.PurePosixPath(e.filename)
+            assert not path.is_absolute() and '..' not in path.parts and '\\' not in e.filename
+            assert (e.external_attr>>16)&0o170000 != 0o120000
+            assert sha(z.read(e))==after[e.filename]
+           for e in z.infolist():(root/e.filename).write_bytes(z.read(e))
+          actual=census();assert {k:v for k,v in actual.items() if k.startswith('previews/')}==previews
+          assert {k:v for k,v in actual.items() if not k.startswith('previews/') and k!='_integrated_manifest.sha256'}==after
+          manifest=''.join(v+'  '+k+'\n' for k,v in sorted(after.items()))
+          (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
+          print(json.dumps({'verifiedApplicationFiles':744,'changedPDFs':17,'unchangedApplicationFiles':727,'unchangedPDFs':60,'retirementPaths':45,'preservedPreviews':422}))
+          PYGUIDES
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
