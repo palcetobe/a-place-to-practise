@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030, approved-navigation-20261030, focused-goals-20261031, guide-maintenance-20261031]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json', 'guide-maintenance.json', 'guide-maintenance.part*.b64']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json', 'guide-maintenance.json', 'guide-maintenance.part*.b64', 'public-library-release.json']
   workflow_dispatch:
 permissions:
   contents: read
@@ -410,6 +410,12 @@ jobs:
           (root/'_integrated_manifest.sha256').write_text(manifest,encoding='utf-8',newline='\n')
           print(json.dumps({'verifiedApplicationFiles':744,'changedPDFs':17,'unchangedApplicationFiles':727,'unchangedPDFs':60,'retirementPaths':45,'preservedPreviews':422}))
           PYGUIDES
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
+          sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Add current written exercise review without replacing earlier practices
+        run: |
+          echo "4adf3aa96f636d6d9bf013bf7e7b9b69ffd649a4f7929dbb20f9f6221bf3db5d  apply-public-library.py" | sha256sum --check --strict
+          python3 apply-public-library.py
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
       - name: Configure Pages
