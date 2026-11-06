@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, retirement-cleanup-20261030, consolidated-packet-after-retirement-20261030, existing-repairs-temperature-20261030, approved-navigation-20261030, focused-goals-20261031, guide-maintenance-20261031]
     # Runtime uploads stage a release; updating its pinned hashes publishes it.
-    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json', 'guide-maintenance.json', 'guide-maintenance.part*.b64', 'public-library-release.json']
+    paths: ['.github/workflows/deploy.yml', 'retirement-cleanup.json', 'consolidated-packet-release.json', 'consolidated-packet.*.b64', 'existing-repairs-temperature.json', 'approved-navigation.json', 'focused-goals.json', 'guide-maintenance.json', 'guide-maintenance.part*.b64', 'public-library-release.json', 'clean-public-site.py', 'test-public-cleanup.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -418,6 +418,10 @@ jobs:
           python3 apply-public-library.py
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
+      - name: Remove internal presentation while preserving practice data and safety
+        run: |
+          python3 test-public-cleanup.py
+          (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
       - name: Configure Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
