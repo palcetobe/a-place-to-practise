@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import re
+import posixpath
 
 
 def clean_library(s):
@@ -143,6 +144,20 @@ def apply(root):
     s = p.read_text(encoding='utf-8').replace(' · placeholders hidden', ' · available practices')
     p.write_text(s, encoding='utf-8', newline='\n')
     changed.append(p.relative_to(root).as_posix())
+    # Existing visitors may have the old scripts cached. Bind the cleaned HTML to this presentation release.
+    changed_js = {name for name in changed if name.endswith('.js')}
+    for p in [root / 'index.html', *(root / 'practice-library').rglob('*.html')]:
+        name = p.relative_to(root).as_posix()
+        original = p.read_text(encoding='utf-8')
+        def version(match):
+            src = match[2]
+            target = posixpath.normpath(posixpath.join(posixpath.dirname(name), src.split('?')[0]))
+            return match[1] + src.split('?')[0] + '?v=public-cleanup-1' + match[3] if target in changed_js else match[0]
+        cleaned = re.sub(r'(<script\b[^>]*\bsrc=")([^"]+)(")', version, original)
+        if cleaned != original:
+            p.write_text(cleaned, encoding='utf-8', newline='\n')
+            if name not in changed:
+                changed.append(name)
     after = {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
              for p in root.rglob('*') if p.is_file()}
     assert before.keys() == after.keys(), 'Cleanup must not remove routes or underlying files'

@@ -32,7 +32,7 @@ class Census(HTMLParser):
         if tag in ('input', 'select', 'button'):
             self.controls.append((tag, a.get('id'), a.get('type')))
         if tag == 'script':
-            self.scripts.append(a.get('src'))
+            self.scripts.append(a.get('src', '').split('?')[0])
 
 
 def hashes():
@@ -78,6 +78,8 @@ assert 'clears when you leave or reload' in practice
 assert 'Files you choose to download remain on your device' in practice
 assert 'Use with therapist guidance' in practice
 assert 'acceptance remain open' not in practice
+assert 'library.js?v=public-cleanup-1' in after
+assert 'abc-component-practice.js?v=public-cleanup-1' in practice
 thought = (root / 'practice-library/retained-classics/thought-record/native.html').read_text(encoding='utf-8')
 assert 'Your writing stays in this open page.' in thought and 'Leaving clears unsaved writing.' in thought
 assert 'href="readable-handout.html"' in thought
