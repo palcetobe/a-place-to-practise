@@ -425,7 +425,7 @@ jobs:
       - name: Apply reviewed practice revisions on the exact cleaned baseline
         run: |
           echo "0715947d9f1a8759a2aa9cca40ab87dd0120d984f4e671a4933350810cf3c05e  apply-practice-revisions.py" | sha256sum --check --strict
-          echo "5ff58ad1f1b63961e9d6fa516f4aba182171940cf998cfa6527806b192ed03e4  practice-revisions.json" | sha256sum --check --strict
+          echo "82ed1add7cceb0cf11f061016666d98f08d17c6d3678d76aa1acb0b75a04d022  practice-revisions.json" | sha256sum --check --strict
           python3 apply-practice-revisions.py
           (cd _site && sha256sum --check --strict _integrated_manifest.sha256)
           sha256sum --check --strict /tmp/preserved-previews.sha256
